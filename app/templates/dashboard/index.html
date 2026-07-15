@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Jadwal App{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-2 text-primary"><i class="bi bi-people"></i></div>
+      <div class="fs-4 fw-bold">{{ jumlah_guru }}</div>
+      <div class="text-muted small">Guru</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-2 text-success"><i class="bi bi-book"></i></div>
+      <div class="fs-4 fw-bold">{{ jumlah_mapel }}</div>
+      <div class="text-muted small">Mapel</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-2 text-warning"><i class="bi bi-building"></i></div>
+      <div class="fs-4 fw-bold">{{ jumlah_kelas }}</div>
+      <div class="text-muted small">Kelas</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-2 text-info"><i class="bi bi-calendar-week"></i></div>
+      <div class="fs-4 fw-bold">{{ jumlah_versi }}</div>
+      <div class="text-muted small">Versi Jadwal</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-clipboard-data"></i> Rekap Beban Ajar per Guru</div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>No</th><th>Nama Guru</th><th>Total JP/Minggu</th></tr>
+      </thead>
+      <tbody>
+        {% for guru, jp in guru_beban %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ guru }}</td>
+          <td><span class="badge bg-primary">{{ jp }} JP</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

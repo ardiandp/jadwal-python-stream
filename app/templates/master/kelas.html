@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Data Kelas - Jadwal App{% endblock %}
+{% block page_title %}Data Kelas{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <form method="POST" id="kelasForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="hapus_ids" id="hapus_ids" value="">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>No</th><th>Jurusan</th><th>Tingkat</th><th>Nama Kelas</th><th style="width:60px">Aksi</th></tr>
+          </thead>
+          <tbody>
+            {% for k in kelas_list %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td><input type="text" name="jurusan_{{ k.id }}" value="{{ k.jurusan }}" class="form-control form-control-sm"></td>
+              <td><input type="text" name="tingkat_{{ k.id }}" value="{{ k.tingkat }}" class="form-control form-control-sm" style="width:80px"></td>
+              <td><input type="text" name="nama_kelas_{{ k.id }}" value="{{ k.nama_kelas }}" class="form-control form-control-sm"></td>
+              <td><button type="button" class="btn btn-outline-danger btn-sm" onclick="markDelete({{ k.id }}, this)"><i class="bi bi-x"></i></button></td>
+            </tr>
+            {% endfor %}
+            <tr class="table-info">
+              <td>#</td>
+              <td><input type="text" name="jurusan_baru" class="form-control form-control-sm" placeholder="Jurusan"></td>
+              <td><input type="text" name="tingkat_baru" class="form-control form-control-sm" placeholder="Tingkat" style="width:80px"></td>
+              <td><input type="text" name="nama_kelas_baru" class="form-control form-control-sm" placeholder="Nama kelas baru..."></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-floppy"></i> Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function markDelete(id, btn) {
+  const hapus = document.getElementById('hapus_ids');
+  const vals = hapus.value ? hapus.value.split(',') : [];
+  if (!vals.includes(String(id))) {
+    vals.push(String(id));
+    hapus.value = vals.join(',');
+    btn.closest('tr').style.textDecoration = 'line-through';
+    btn.closest('tr').style.opacity = '0.5';
+  }
+}
+</script>
+{% endblock %}

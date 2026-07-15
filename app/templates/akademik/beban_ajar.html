@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Beban Ajar - Jadwal App{% endblock %}
+{% block page_title %}Beban Ajar (Jam Pelajaran per Minggu){% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover mb-0" id="bebanTable">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:180px">Mapel</th>
+            {% for k in kelas_list %}
+            <th class="text-center" style="min-width:80px">{{ k.nama_kelas }}</th>
+            {% endfor %}
+            <th style="width:40px">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in mapel_list %}
+          <tr>
+            <td><small><strong>{{ m.kode }}</strong> - {{ m.nama_mapel }}</small></td>
+            {% for k in kelas_list %}
+            <td class="text-center p-1">
+              <input type="number" class="form-control form-control-sm text-center cell-input"
+                     data-mapel="{{ m.id }}" data-kelas="{{ k.id }}"
+                     value="{{ beban_map.get((m.id, k.id), 0) }}" min="0" max="40" style="width:60px">
+            </td>
+            {% endfor %}
+            <td class="text-center fw-bold row-total">0</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td><strong>Total JP</strong></td>
+            {% for k in kelas_list %}
+            <td class="text-center fw-bold col-total" data-kelas="{{ k.id }}">0</td>
+            {% endfor %}
+            <td class="text-center fw-bold" id="grandTotal">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="p-3">
+      <button class="btn btn-primary" onclick="simpanBeban()"><i class="bi bi-floppy"></i> Simpan</button>
+      <span id="saveStatus" class="ms-2"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateTotals() {
+  const table = document.getElementById('bebanTable');
+  const rows = table.querySelectorAll('tbody tr');
+  const kelasCols = {{ kelas_list|length }};
+  const colTotals = new Array(kelasCols).fill(0);
+  let grandTotal = 0;
+
+  rows.forEach(function(row) {
+    const inputs = row.querySelectorAll('.cell-input');
+    let rowTotal = 0;
+    inputs.forEach(function(inp, idx) {
+      const val = parseInt(inp.value) || 0;
+      rowTotal += val;
+      colTotals[idx] = (colTotals[idx] || 0) + val;
+    });
+    const rt = row.querySelector('.row-total');
+    if (rt) rt.textContent = rowTotal;
+    grandTotal += rowTotal;
+  });
+
+  document.querySelectorAll('.col-total').forEach(function(td, idx) {
+    td.textContent = colTotals[idx] || 0;
+  });
+  document.getElementById('grandTotal').textContent = grandTotal;
+}
+
+function simpanBeban() {
+  const btn = document.querySelector('button[onclick="simpanBeban()"]');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
+
+  const data = {};
+  document.querySelectorAll('.cell-input').forEach(function(inp) {
+    const mapelId = inp.dataset.mapel;
+    const kelasId = inp.dataset.kelas;
+    if (!data[kelasId]) data[kelasId] = {};
+    data[kelasId][mapelId] = inp.value || '0';
+  });
+
+  fetch('{{ url_for("akademik.beban_ajar") }}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+    body: JSON.stringify(data)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(resp) {
+    const status = document.getElementById('saveStatus');
+    if (resp.status === 'ok') {
+      status.innerHTML = '<span class="text-success">✓ Disimpan</span>';
+    } else {
+      status.innerHTML = '<span class="text-danger">✗ ' + resp.message + '</span>';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-floppy"></i> Simpan';
+  })
+  .catch(function(err) {
+    document.getElementById('saveStatus').innerHTML = '<span class="text-danger">✗ Error</span>';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-floppy"></i> Simpan';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.cell-input').forEach(function(inp) {
+    inp.addEventListener('input', updateTotals);
+  });
+  updateTotals();
+});
+</script>
+{% endblock %}

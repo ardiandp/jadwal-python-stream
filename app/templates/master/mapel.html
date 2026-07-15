@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Data Mapel - Jadwal App{% endblock %}
+{% block page_title %}Data Mapel &amp; Penugasan{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <form method="POST" id="mapelForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="hapus_ids" id="hapus_ids" value="">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>No</th><th>Kode</th><th>Nama Mapel</th><th>Guru Pengampu</th>
+              <th style="width:80px">Pagi Saja</th><th style="width:80px">Max Jam Ke</th><th style="width:60px">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in mapel_list %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td><input type="text" name="kode_{{ m.id }}" value="{{ m.kode }}" class="form-control form-control-sm" style="width:70px"></td>
+              <td><input type="text" name="nama_mapel_{{ m.id }}" value="{{ m.nama_mapel }}" class="form-control form-control-sm"></td>
+              <td>
+                <select name="guru_id_{{ m.id }}" class="form-select form-select-sm">
+                  <option value="">-- Pilih --</option>
+                  {% for g in guru_list %}
+                  <option value="{{ g.id }}" {% if m.guru_id == g.id %}selected{% endif %}>{{ g.nama }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="text-center">
+                <input type="checkbox" name="pagi_saja_{{ m.id }}" value="1" class="form-check-input" {% if m.aturan and m.aturan.pagi_saja %}checked{% endif %}>
+              </td>
+              <td>
+                <input type="number" name="max_jam_ke_{{ m.id }}" value="{{ m.aturan.max_jam_ke if m.aturan and m.aturan.max_jam_ke else '' }}" class="form-control form-control-sm" style="width:60px" min="1" max="{{ max_jam }}">
+              </td>
+              <td><button type="button" class="btn btn-outline-danger btn-sm" onclick="markDelete({{ m.id }}, this)"><i class="bi bi-x"></i></button></td>
+            </tr>
+            {% endfor %}
+            <tr class="table-info">
+              <td>#</td>
+              <td><input type="text" name="kode_baru" class="form-control form-control-sm" placeholder="Kode" style="width:70px"></td>
+              <td><input type="text" name="nama_mapel_baru" class="form-control form-control-sm" placeholder="Nama mapel baru..."></td>
+              <td>
+                <select name="guru_id_baru" class="form-select form-select-sm">
+                  <option value="">-- Pilih --</option>
+                  {% for g in guru_list %}
+                  <option value="{{ g.id }}">{{ g.nama }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="text-center">
+                <input type="checkbox" name="pagi_saja_baru" value="1" class="form-check-input">
+              </td>
+              <td>
+                <input type="number" name="max_jam_ke_baru" class="form-control form-control-sm" style="width:60px" min="1" max="{{ max_jam }}">
+              </td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-floppy"></i> Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function markDelete(id, btn) {
+  const hapus = document.getElementById('hapus_ids');
+  const vals = hapus.value ? hapus.value.split(',') : [];
+  if (!vals.includes(String(id))) {
+    vals.push(String(id));
+    hapus.value = vals.join(',');
+    btn.closest('tr').style.textDecoration = 'line-through';
+    btn.closest('tr').style.opacity = '0.5';
+  }
+}
+</script>
+{% endblock %}

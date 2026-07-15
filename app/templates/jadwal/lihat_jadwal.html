@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Lihat Jadwal - Jadwal App{% endblock %}
+{% block page_title %}Lihat Jadwal{% endblock %}
+{% block content %}
+
+{# --- Version Selector --- #}
+<div class="row mb-3">
+  <div class="col-md-4">
+    <form method="GET" class="d-flex gap-2">
+      <select name="versi_id" class="form-select" onchange="this.form.submit()">
+        {% for v in versi_list %}
+        <option value="{{ v.id }}" {% if v.id == versi_id %}selected{% endif %}>
+          {{ v.nama }} ({{ v.dibuat.strftime('%d/%m/%Y') if v.dibuat else '-' }})
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  <div class="col-md-8 text-end">
+    <a href="{{ url_for('jadwal.export_excel_route', versi_id=versi_id) }}" class="btn btn-success btn-sm">
+      <i class="bi bi-file-earmark-excel"></i> Unduh Semua (.xlsx)
+    </a>
+  </div>
+</div>
+
+{# --- Stats --- #}
+<div class="row g-2 mb-3">
+  <div class="col-md-3"><span class="badge bg-info fs-6">Total: {{ versi_selected.total_slot if versi_selected else 0 }}</span></div>
+  <div class="col-md-3">
+    {% if versi_selected and versi_selected.unplaced_slot > 0 %}
+    <span class="badge bg-warning text-dark fs-6">Unplaced: {{ versi_selected.unplaced_slot }}</span>
+    {% else %}
+    <span class="badge bg-success fs-6">Unplaced: 0</span>
+    {% endif %}
+  </div>
+</div>
+
+{# --- Tabs --- #}
+<ul class="nav nav-tabs mb-3" id="jadwalTabs">
+  <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#perkelas">Per Kelas</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#perguru">Per Guru</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#datamentah">Data Mentah</a></li>
+</ul>
+
+<div class="tab-content">
+  {# ===== TAB 1: Per Kelas ===== #}
+  <div class="tab-pane fade show active" id="perkelas">
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <form method="GET" id="kelasForm">
+          <input type="hidden" name="versi_id" value="{{ versi_id }}">
+          <select name="kelas" class="form-select" onchange="document.getElementById('kelasForm').submit()">
+            {% for k in kelas_list %}
+            <option value="{{ k }}" {% if k == kelas_pilihan %}selected{% endif %}>{{ k }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="col-md-8 text-end">
+        <a href="{{ url_for('jadwal.export_html', versi_id=versi_id, kelas=kelas_pilihan) }}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-download"></i> Unduh HTML Kelas Ini
+        </a>
+      </div>
+    </div>
+    <div class="jadwal-html-container" style="overflow-x:auto;background:#fff;padding:15px;border-radius:8px;border:1px solid #dee2e6;">
+      {{ html_jadwal|safe }}
+    </div>
+  </div>
+
+  {# ===== TAB 2: Per Guru ===== #}
+  <div class="tab-pane fade" id="perguru">
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <form method="GET" id="guruForm">
+          <input type="hidden" name="versi_id" value="{{ versi_id }}">
+          <select name="guru" class="form-select" onchange="document.getElementById('guruForm').submit()">
+            {% for g in guru_list %}
+            <option value="{{ g }}" {% if g == guru_pilihan %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+    </div>
+    <div id="guruTableContainer" style="overflow-x:auto;">
+      <p class="text-muted small">Pilih guru dari dropdown di atas untuk melihat jadwal.</p>
+    </div>
+  </div>
+
+  {# ===== TAB 3: Data Mentah ===== #}
+  <div class="tab-pane fade" id="datamentah">
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover table-sm" id="rawTable">
+        <thead class="table-light">
+          <tr><th>Kelas</th><th>Kode</th><th>Mapel</th><th>Guru</th><th>Hari</th><th>Jam Ke</th></tr>
+        </thead>
+        <tbody>
+          {% for _, r in df.iterrows() %}
+          <tr>
+            <td>{{ r.Kelas }}</td>
+            <td>{{ r.Kode }}</td>
+            <td>{{ r.Mapel }}</td>
+            <td>{{ r.Guru }}</td>
+            <td>{{ r.Hari }}</td>
+            <td>{{ r['Jam Ke'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Guru tab - build teacher schedule table from raw data
+const rawData = {{ df_json|safe }};
+
+function buildGuruTable(guruName) {
+  const hariList = {{ settings.hari_aktif|tojson|safe }};
+  const jamPerHari = {{ settings.jam_per_hari }};
+  const filtered = rawData.filter(function(r) { return r.Guru === guruName; });
+
+  let html = '<div class="table-responsive"><table class="table table-bordered table-sm text-center">';
+  html += '<tr><th>Jam Ke</th>';
+  hariList.forEach(function(h) { html += '<th>' + h + '</th>'; });
+  html += '</tr>';
+
+  for (let j = 1; j <= jamPerHari; j++) {
+    html += '<tr><td style="font-weight:bold">' + j + '</td>';
+    hariList.forEach(function(h) {
+      const items = filtered.filter(function(r) { return r.Hari === h && r['Jam Ke'] === j; });
+      if (items.length > 0) {
+        html += '<td style="padding:2px 4px;font-size:12px;">';
+        items.forEach(function(item) {
+          html += '<div>' + item.Kode + ' - ' + item.Mapel + '<br><small>' + item.Kelas + '</small></div>';
+        });
+        html += '</td>';
+      } else {
+        html += '<td></td>';
+      }
+    });
+    html += '</tr>';
+  }
+  html += '</table></div>';
+  return html;
+}
+
+// Check if we're on the guru tab with a selection
+document.addEventListener('DOMContentLoaded', function() {
+  const guruSelect = document.querySelector('#guruForm select');
+  if (guruSelect && guruSelect.value) {
+    const container = document.getElementById('guruTableContainer');
+    container.innerHTML = buildGuruTable(guruSelect.value);
+  }
+
+  // Update when tab changes
+  document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(function(tab) {
+    tab.addEventListener('shown.bs.tab', function(e) {
+      if (e.target.getAttribute('href') === '#perguru' && guruSelect && guruSelect.value) {
+        document.getElementById('guruTableContainer').innerHTML = buildGuruTable(guruSelect.value);
+      }
+    });
+  });
+
+  // Update when guru changes
+  if (guruSelect) {
+    guruSelect.addEventListener('change', function() {
+      document.getElementById('guruTableContainer').innerHTML = buildGuruTable(this.value);
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Preferensi Guru - Jadwal App{% endblock %}
+{% block page_title %}Preferensi Guru{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>No</th><th>Nama Guru</th>
+              <th>Hari Preferensi <small class="text-muted">(pisahkan koma)</small></th>
+              <th>Waktu</th><th>Bobot (1-10)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for g in guru_list %}
+            {% set p = pref_map.get(g.id) %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ g.nama }}</td>
+              <td>
+                <input type="text" name="hari_{{ p.id if p else '' }}" value="{{ p.preferensi_hari if p else '' }}" class="form-control form-control-sm" placeholder="Senin,Selasa,...">
+              </td>
+              <td>
+                <select name="waktu_{{ p.id if p else '' }}" class="form-select form-select-sm" style="width:120px">
+                  <option value="">-- Semua --</option>
+                  <option value="pagi" {% if p and p.preferensi_waktu == 'pagi' %}selected{% endif %}>Pagi</option>
+                  <option value="siang" {% if p and p.preferensi_waktu == 'siang' %}selected{% endif %}>Siang</option>
+                </select>
+              </td>
+              <td>
+                <input type="number" name="bobot_{{ p.id if p else '' }}" value="{{ p.bobot if p else 5 }}" class="form-control form-control-sm" style="width:70px" min="1" max="10">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-3">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-floppy"></i> Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

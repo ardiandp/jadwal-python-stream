@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Generate Jadwal - Jadwal App{% endblock %}
+{% block page_title %}Generate Jadwal{% endblock %}
+{% block content %}
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center p-2">
+      <small class="text-muted">Hari Aktif</small>
+      <strong>{{ settings.hari_aktif|length }} hari</strong>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-2">
+      <small class="text-muted">Jam per Hari</small>
+      <strong>{{ settings.jam_per_hari }}</strong>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-2">
+      <small class="text-muted">Kapasitas/Kelas</small>
+      <strong>{{ verifikasi.kapasitas }} slot</strong>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-2">
+      <small class="text-muted">Total JP</small>
+      <strong>{{ total_jam }} jam</strong>
+    </div>
+  </div>
+</div>
+
+{# --- Verifikasi --- #}
+{% set punya_masalah = verifikasi.errors or verifikasi.warnings %}
+<div class="card mb-3">
+  <div class="card-header" data-bs-toggle="collapse" data-bs-target="#verifikasiPanel" style="cursor:pointer">
+    <i class="bi bi-clipboard-check"></i> Verifikasi Data
+    {% if verifikasi.errors %}<span class="badge bg-danger ms-2">{{ verifikasi.errors|length }} error</span>{% endif %}
+    {% if verifikasi.warnings %}<span class="badge bg-warning text-dark ms-2">{{ verifikasi.warnings|length }} warning</span>{% endif %}
+  </div>
+  <div id="verifikasiPanel" class="collapse {% if punya_masalah %}show{% endif %}">
+    <div class="card-body">
+      {% if not punya_masalah %}
+      <div class="alert alert-success mb-0">Semua data lengkap dan siap generate!</div>
+      {% endif %}
+
+      {% for e in verifikasi.errors %}
+      <div class="alert alert-danger">
+        <strong>{{ e.label }}</strong>
+        {% if e["items"] %}: {{ e["items"]|join(", ") }}{% endif %}
+        {% if e.rekomendasi %}
+        <div class="mt-1 small"><i class="bi bi-lightbulb"></i> {{ e.rekomendasi }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% for w in verifikasi.warnings %}
+      <div class="alert alert-warning">
+        <strong>{{ w.label }}</strong>
+        {% if w["items"] %}: {{ w["items"]|join(", ") }}{% endif %}
+        {% if w.rekomendasi %}
+        <div class="mt-1 small"><i class="bi bi-lightbulb"></i> {{ w.rekomendasi }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% for item in verifikasi.info %}
+      <span class="badge bg-info text-dark me-1">{{ item }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# --- Generate Form --- #}
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-play-circle"></i> Generate Jadwal</div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Max Attempts</label>
+          <input type="number" name="max_attempts" value="300" class="form-control" min="20" max="1000">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Jumlah Versi</label>
+          <input type="number" name="num_versions" value="3" class="form-control" min="1" max="10">
+        </div>
+      </div>
+      {% if not verifikasi.siap %}
+      <div class="form-check mb-3">
+        <input type="checkbox" name="override" value="1" class="form-check-input" id="override">
+        <label class="form-check-label" for="override">Generate tetap berjalan (abaikan error)</label>
+      </div>
+      {% endif %}
+      <button type="submit" class="btn btn-success btn-lg">
+        <i class="bi bi-play-fill"></i> Generate / Regenerate
+      </button>
+    </div>
+  </div>
+</form>
+
+{# --- Existing Versions --- #}
+{% if versi_list %}
+<div class="card">
+  <div class="card-header"><i class="bi bi-clock-history"></i> Versi Tersimpan</div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>#</th><th>Nama</th><th>Dibuat</th><th>Total Slot</th><th>Unplaced</th><th>Aksi</th></tr>
+      </thead>
+      <tbody>
+        {% for v in versi_list %}
+        <tr>
+          <td>{{ v.id }}</td>
+          <td>{{ v.nama }}</td>
+          <td>{{ v.dibuat.strftime('%d/%m/%Y %H:%M') if v.dibuat else '-' }}</td>
+          <td>{{ v.total_slot }}</td>
+          <td>
+            {% if v.unplaced_slot > 0 %}
+            <span class="badge bg-warning text-dark">{{ v.unplaced_slot }}</span>
+            {% else %}
+            <span class="badge bg-success">0</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('jadwal.delete_versi', versi_id=v.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-danger btn-sm" onclick="return confirm('Hapus versi ini?')"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

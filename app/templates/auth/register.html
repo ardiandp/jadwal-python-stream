@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Register User - Jadwal App{% endblock %}
+{% block page_title %}Register User{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          {{ form.username.label(class="form-label") }}
+          {{ form.username(class="form-control") }}
+        </div>
+        <div class="col-md-4 mb-3">
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control") }}
+        </div>
+        <div class="col-md-4 mb-3">
+          {{ form.role.label(class="form-label") }}
+          {{ form.role(class="form-select") }}
+        </div>
+        <div class="col-md-4 mb-3">
+          {{ form.guru_id.label(class="form-label") }}
+          {{ form.guru_id(class="form-select") }}
+        </div>
+      </div>
+      {{ form.submit(class="btn btn-primary") }}
+    </form>
+  </div>
+</div>
+<hr>
+<h5>Daftar User</h5>
+<div class="table-responsive">
+  <table class="table table-bordered table-hover">
+    <thead class="table-light">
+      <tr><th>Username</th><th>Role</th><th>Linked Guru</th><th>Aksi</th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td><span class="badge bg-secondary">{{ u.role }}</span></td>
+        <td>{{ u.guru.nama if u.guru else '-' }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('auth.delete_user', user_id=u.id) }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger btn-sm" onclick="return confirm('Hapus user {{ u.username }}?')"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
