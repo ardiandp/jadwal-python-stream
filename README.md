@@ -4,6 +4,12 @@ Aplikasi CRUD + generator jadwal pelajaran otomatis, dibuat berdasarkan
 struktur data: **Guru → Mapel/Kode Penugasan → Kelas → Beban Ajar (jam/minggu)
 → Jadwal**.
 
+## Screenshot
+
+![Dashboard](https://raw.githubusercontent.com/ardiandp/jadwal-python-stream/refs/heads/flask/screenshoot/1.png)
+
+![Jadwal](https://raw.githubusercontent.com/ardiandp/jadwal-python-stream/refs/heads/flask/screenshoot/2.png)
+
 ## Fitur
 
 1. **Dashboard** — ringkasan jumlah guru, kelas, mapel, dan rekap total jam
