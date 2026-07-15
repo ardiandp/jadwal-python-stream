@@ -1,8 +1,12 @@
-# Aplikasi Penjadwal Sekolah (Python + Streamlit)
+# Aplikasi Penjadwal Sekolah (Python)
 
 Aplikasi CRUD + generator jadwal pelajaran otomatis, dibuat berdasarkan
 struktur data: **Guru → Mapel/Kode Penugasan → Kelas → Beban Ajar (jam/minggu)
 → Jadwal**.
+
+Tersedia dua versi frontend:
+- **Flask** (rekomendasi) — web app dengan autentikasi user, MySQL
+- **Streamlit** — prototype cepat dengan SQLite
 
 ## Screenshot
 
@@ -16,73 +20,98 @@ struktur data: **Guru → Mapel/Kode Penugasan → Kelas → Beban Ajar (jam/min
    mengajar per guru.
 2. **Data Guru** — CRUD nama guru.
 3. **Data Mapel & Penugasan** — CRUD kode penugasan (mis. `A`, `B1`, `B2`, ...)
-   yang menghubungkan satu guru dengan satu mata pelajaran. Satu guru boleh
-   punya banyak kode jika mengampu beberapa mapel.
+   yang menghubungkan satu guru dengan satu mata pelajaran.
 4. **Data Kelas** — CRUD kelas (jurusan, tingkat, nama kelas/rombel).
-5. **Beban Ajar (Jam/Minggu)** — matriks editable persis seperti tabel
-   "Beban Ajar Mata Pelajaran" pada data sumber: baris = mapel, kolom = kelas,
+5. **Beban Ajar (Jam/Minggu)** — matriks editable: baris = mapel, kolom = kelas,
    isi = jam/minggu.
 6. **Pengaturan Jadwal** — pilih hari aktif, jumlah jam pelajaran per hari,
    dan maksimal jam berurutan per mapel dalam sehari (blok).
 7. **Generate Jadwal** — mesin penjadwal otomatis (randomized greedy,
-   multi-restart) yang menyusun jadwal tanpa bentrok:
-   - satu kelas tidak mungkin punya 2 mapel di jam yang sama,
-   - satu guru tidak mungkin mengajar 2 kelas di jam yang sama.
-8. **Lihat Jadwal** — tampilan jadwal per kelas, per guru, tabel mentah, dan
-   tombol unduh ke Excel (satu sheet per kelas).
+   multi-restart) tanpa bentrok.
+8. **Lihat Jadwal** — tampilan jadwal per kelas, per guru, export ke Excel.
 
-## Cara Menjalankan
+---
+
+## Cara Menjalankan (Flask)
+
+### Prasyarat
+
+- Python 3.10+
+- MySQL (bisa pakai Laragon/XAMPP)
+- Database `jadwal_app` sudah dibuat
+
+### Langkah
 
 ```bash
-cd jadwal_app
+# 1. Install dependencies
 pip install -r requirements.txt
+
+# 2. Install driver MySQL (belum ada di requirements.txt)
+pip install mysql-connector-python
+
+# 3. Buat database di MySQL
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS jadwal_app;"
+
+# 4. Migrate data dari Streamlit SQLite ke MySQL + buat tabel + seed admin
+python seed.py
+
+# 5. Jalankan Flask
+python run.py
+```
+
+Buka browser ke **`http://localhost:5000`**.
+
+Login default: **`admin`** / **`admin123`**
+
+### Konfigurasi
+
+Konfigurasi database ada di `config.py`:
+
+```python
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root@localhost/jadwal_app?charset=utf8mb4"
+```
+
+Ubah jika MySQL anda pakai password atau port berbeda.
+
+---
+
+## Cara Menjalankan (Streamlit — versi lama)
+
+```bash
+pip install streamlit pandas openpyxl
 streamlit run app.py
 ```
 
-Aplikasi akan membuka browser ke `http://localhost:8501`. Semua data
-tersimpan otomatis di file `jadwal.db` (SQLite) pada folder yang sama, jadi
-tidak hilang saat aplikasi ditutup/dijalankan ulang.
+Buka browser ke `http://localhost:8501`. Data tersimpan di `jadwal.db` (SQLite).
 
-## Data Dummy Awal
+> **Catatan:** Versi Streamlit tidak memiliki autentikasi user.
 
-Saat pertama kali dijalankan, aplikasi otomatis mengisi:
-- 14 guru,
-- 10 kelas (TKJ X/XI/XII-1/XII-2, MPLB X/XI, TSM X/XI/XII, AKL X),
-- 21 kode penugasan mapel (mengikuti contoh: A, B1, B2, C, D, E, F1–F3, G,
-  H1, H2, J, K, L, M, N1–N3, O1, O2),
-- beban ajar (jam/minggu) untuk tiap kombinasi mapel–kelas.
-
-> **Catatan:** Kode `H1` pada foto sumber tampak dipakai dua kali (untuk
-> "Seni Budaya" dan "Produk Kreatif dan Kewirausahaan"). Di aplikasi ini
-> dibetulkan menjadi `H1` dan `H2` agar tetap unik. Nilai jam pada beberapa
-> baris beban ajar juga merupakan estimasi mendekati foto sumber yang sedikit
-> buram — silakan sesuaikan langsung lewat menu **Beban Ajar** sesuai data
-> riil sekolah Anda. Semua data (guru, mapel, kelas, beban ajar) bisa diedit
-> bebas — data dummy ini hanya starting point.
-
-## Cara Kerja Mesin Penjadwal
-
-1. Setiap baris beban ajar (mapel di kelas tertentu, sekian jam/minggu)
-   dipecah jadi blok maksimal `max_blok` jam berurutan (default 2), misal
-   4 jam → dua blok @2 jam.
-2. Semua blok dari semua kelas digabung lalu diacak urutannya.
-3. Setiap blok dicoba ditempatkan pada slot (hari, jam) yang kosong untuk
-   kelas tsb **dan** kosong untuk guru pengampunya.
-4. Jika ada blok gagal ditempatkan, seluruh proses diulang (multi-restart,
-   default hingga 300 kali) dengan urutan acak berbeda, lalu diambil hasil
-   dengan jumlah kegagalan paling sedikit.
-5. Jika kapasitas hari/jam aktif tidak cukup dibanding total beban, akan ada
-   sisa jam yang gagal ditempatkan — aplikasi menampilkan daftarnya di
-   halaman **Generate Jadwal** agar bisa disesuaikan (tambah hari/jam aktif,
-   atau kurangi beban).
+---
 
 ## Struktur File
 
 ```
-jadwal_app/
-├── app.py            # Aplikasi Streamlit (UI, CRUD, halaman)
-├── db.py             # Lapisan database SQLite + seed data dummy
-├── scheduler.py       # Mesin generate jadwal
-├── requirements.txt
-└── jadwal.db          # dibuat otomatis saat pertama kali dijalankan
+├── run.py                 # Entry point Flask
+├── config.py              # Konfigurasi Flask (database, secret key)
+├── seed.py                # Migrasi data SQLite → MySQL + seed admin
+├── requirements.txt       # Dependencies Flask
+├── app/
+│   ├── __init__.py        # Flask app factory
+│   ├── models.py          # SQLAlchemy models (9 tabel)
+│   ├── forms.py           # WTForms (login, register, settings)
+│   ├── routes/            # Blueprint routes
+│   │   ├── auth.py        # Login, register
+│   │   ├── dashboard.py   # Dashboard
+│   │   ├── master.py      # CRUD guru, kelas, mapel
+│   │   ├── akademik.py    # Beban ajar, preferensi, pengaturan
+│   │   └── jadwal.py      # Generate & lihat jadwal
+│   ├── services/          # Business logic
+│   │   ├── scheduler.py   # Mesin generate jadwal
+│   │   ├── export.py      # Export Excel
+│   │   └── verification.py# Verifikasi data pra-generate
+│   └── templates/         # Jinja2 HTML templates
+├── app.py                 # Aplikasi Streamlit (versi lama)
+├── db.py                  # Database layer SQLite (versi lama)
+├── scheduler.py           # Mesin jadwal (versi lama)
+└── jadwal.db              # SQLite database (versi Streamlit)
 ```
