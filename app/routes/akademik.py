@@ -1,5 +1,8 @@
 import json
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+import io
+import subprocess
+from datetime import datetime
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from app import db
 from app.models import Guru, Kelas, Mapel, BebanAjar, PreferensiGuru, AturanMapel, Pengaturan
@@ -54,16 +57,19 @@ def preferensi():
     if request.method == "POST" and current_user.role == "admin":
         data = request.form
         try:
-            # Update existing
-            for key, val in data.items():
+            # Get all unique guru_ids from form keys
+            for key in data.keys():
                 if key.startswith("hari_"):
-                    pid = int(key.replace("hari_", ""))
-                    p = db.session.get(PreferensiGuru, pid)
-                    if p:
-                        p.preferensi_hari = val.strip() or None
-                        p.preferensi_waktu = data.get(f"waktu_{pid}", "").strip() or None
-                        bobot_str = data.get(f"bobot_{pid}", "").strip()
-                        p.bobot = int(bobot_str) if bobot_str else 5
+                    pid_str = key[len("hari_"):]
+                    if pid_str.isdigit():
+                        pid = int(pid_str)
+                        p = db.session.get(PreferensiGuru, pid)
+                        if p:
+                            hari_list = data.getlist(f"hari_{pid}")
+                            p.preferensi_hari = ",".join(hari_list) if hari_list else None
+                            p.preferensi_waktu = data.get(f"waktu_{pid}", "").strip() or None
+                            bobot_str = data.get(f"bobot_{pid}", "").strip()
+                            p.bobot = int(bobot_str) if bobot_str else 5
             db.session.commit()
             flash("Preferensi guru disimpan.", "success")
         except Exception as e:
@@ -78,6 +84,39 @@ def preferensi():
                            guru_list=guru_list,
                            pref_map=pref_map,
                            active_menu="preferensi")
+
+
+# --- BACKUP DATABASE ---
+@akademik_bp.route("/backup-database")
+@login_required
+def backup_database():
+    if current_user.role != "admin":
+        flash("Akses ditolak.", "danger")
+        return redirect(url_for("dashboard.index"))
+
+    try:
+        # Find mysqldump in Laragon path or rely on PATH
+        result = subprocess.run(
+            ["mysqldump", "-u", "root", "jadwal_app"],
+            capture_output=True, text=True, check=True, timeout=60,
+        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        buf = io.BytesIO(result.stdout.encode("utf-8"))
+        return send_file(
+            buf,
+            mimetype="application/sql",
+            as_attachment=True,
+            download_name=f"jadwal_app_{timestamp}.sql",
+        )
+    except FileNotFoundError:
+        flash("mysqldump tidak ditemukan. Backup manual via Laragon terminal.", "danger")
+        return redirect(url_for("akademik.preferensi"))
+    except subprocess.TimeoutExpired:
+        flash("Backup timeout. Database terlalu besar?", "danger")
+        return redirect(url_for("akademik.preferensi"))
+    except subprocess.CalledProcessError as e:
+        flash(f"Gagal backup: {e.stderr[:200]}", "danger")
+        return redirect(url_for("akademik.preferensi"))
 
 
 # --- PENGATURAN ---

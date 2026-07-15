@@ -2,7 +2,12 @@
 {% block title %}Preferensi Guru - Jadwal App{% endblock %}
 {% block page_title %}Preferensi Guru{% endblock %}
 {% block content %}
-<div class="card">
+<style>
+  .hari-option { white-space: nowrap; }
+  .hari-option input { margin-right: 4px; }
+</style>
+
+<div class="card mb-3">
   <div class="card-body p-0">
     <form method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -11,21 +16,31 @@
           <thead class="table-light">
             <tr>
               <th>No</th><th>Nama Guru</th>
-              <th>Hari Preferensi <small class="text-muted">(pisahkan koma)</small></th>
+              <th>Hari Preferensi</th>
               <th>Waktu</th><th>Bobot (1-10)</th>
             </tr>
           </thead>
           <tbody>
             {% for g in guru_list %}
             {% set p = pref_map.get(g.id) %}
+            {% set selected_hari = p.preferensi_hari.split(',') if p and p.preferensi_hari else [] %}
             <tr>
               <td>{{ loop.index }}</td>
               <td>{{ g.nama }}</td>
-              <td>
-                <input type="text" name="hari_{{ p.id if p else '' }}" value="{{ p.preferensi_hari if p else '' }}" class="form-control form-control-sm" placeholder="Senin,Selasa,...">
+              <td style="min-width:280px">
+                <div class="d-flex flex-wrap gap-2 hari-option">
+                  {% for h in ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"] %}
+                  <label class="form-check-label">
+                    <input type="checkbox" name="hari_{{ p.id if p else '' }}" value="{{ h }}"
+                           class="form-check-input" style="margin-top:0"
+                           {% if h in selected_hari %}checked{% endif %}>
+                    {{ h[:3] }}
+                  </label>
+                  {% endfor %}
+                </div>
               </td>
               <td>
-                <select name="waktu_{{ p.id if p else '' }}" class="form-select form-select-sm" style="width:120px">
+                <select name="waktu_{{ p.id if p else '' }}" class="form-select form-select-sm" style="width:110px">
                   <option value="">-- Semua --</option>
                   <option value="pagi" {% if p and p.preferensi_waktu == 'pagi' %}selected{% endif %}>Pagi</option>
                   <option value="siang" {% if p and p.preferensi_waktu == 'siang' %}selected{% endif %}>Siang</option>
@@ -43,6 +58,17 @@
         <button type="submit" class="btn btn-primary"><i class="bi bi-floppy"></i> Simpan</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-database"></i> Backup Database</div>
+  <div class="card-body">
+    <p class="text-muted small mb-2">Download backup database MySQL dalam format <code>.sql</code>. Backup bisa direstore kapan saja via CLI:</p>
+    <pre class="small bg-light p-2 rounded">mysql -u root jadwal_app &lt; backup.sql</pre>
+    <a href="{{ url_for('akademik.backup_database') }}" class="btn btn-outline-primary">
+      <i class="bi bi-download"></i> Backup Database (.sql)
+    </a>
   </div>
 </div>
 {% endblock %}
